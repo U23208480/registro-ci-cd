@@ -11,6 +11,6 @@ def validar_registro(nombre, correo, clave):
         errores.append("El nombre debe tener al menos 3 caracteres.")
     if not PATRON_CORREO.match(correo.strip()):
         errores.append("El correo no es válido.")
-    if len(clave) < LARGO_MIN_CLAVE:
+    if len(clave) <= LARGO_MIN_CLAVE:
         errores.append("La contraseña debe tener al menos 8 caracteres.")
     return errores
