@@ -1,0 +1,67 @@
+name: CI-CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas automáticas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -v
+
+  build:
+    name: Build y artifact
+    needs: pruebas
+    runs-on: ubuntu-latest
+    env:
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python build.py dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sitio-dist
+          path: dist
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  despliegue:
+    name: CD - publicar en GitHub Pages
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - name: Verificar secret del servidor
+        env:
+          APP_SECRET: ${{ secrets.APP_SECRET }}
+        run: |
+          if [ -z "$APP_SECRET" ]; then
+            echo "Falta el secret APP_SECRET (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          echo "Secret APP_SECRET configurado."
+      - id: publicar
+        uses: actions/deploy-pages@v4
